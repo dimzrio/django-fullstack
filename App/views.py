@@ -1,9 +1,13 @@
+from pydoc import pager
+import re
 from unicodedata import name
 from django.shortcuts import render
 from django.contrib.auth.decorators import login_required
 from App.models import Patient
 from django.contrib import messages
 from django.http import HttpResponseRedirect
+from django.db.models import Q
+from django.core.paginator import Paginator
 
 # Function to render the Homepage
 def frontend(request):
@@ -12,7 +16,19 @@ def frontend(request):
 # Function to render the Backend
 @login_required(login_url='login')
 def backend(request):
-    return render(request, "backend.html")
+    if 'q' in request.GET:
+        q = request.GET['q']
+        all_patient_list = Patient.objects.filter(
+            Q(name__icontains=q) | Q(phone__icontains=q) | Q(email=q) | Q(age=q) | Q(gender=q) | Q(note=q)
+        ).order_by('-created_at')
+    else:
+        all_patient_list = Patient.objects.all().order_by('-created_at')
+    
+    paginator   = Paginator(all_patient_list, 2)
+    page        = request.GET.get('page')
+    all_patient = paginator.get_page(page)
+
+    return render(request, "backend.html", {"patients": all_patient})
 
 # Function to Add Patients to DB
 @login_required(login_url='login')
